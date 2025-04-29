@@ -1,7 +1,9 @@
 package com.example.wifilight
 
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.wifi.WifiManager
 import android.os.Bundle
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
@@ -13,6 +15,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import com.example.wifilight.databinding.ActivityMainBinding
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import okhttp3.Callback
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -20,6 +25,7 @@ import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import java.io.IOException
+import java.net.InetAddress
 import java.util.Locale
 
 
@@ -54,6 +60,9 @@ class MainActivity : AppCompatActivity() {
             )
         }
 
+        binding.ipAddress.text = "Internal IP Address: ${getLocalIpAddress()}"
+        fetchDataFromIP("http://192.168.4.1")
+
         speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
         speechRecognizer.setRecognitionListener(object : RecognitionListener {
             override fun onResults(results: Bundle) {
@@ -61,10 +70,13 @@ class MainActivity : AppCompatActivity() {
                 Log.i(TAG,"Results: ${matches}")
                 if (matches != null && !matches.isEmpty()) {
                     val command = matches[0].lowercase(Locale.getDefault())
-                    if (command == "on") {
+                    Log.i(TAG,"In am command: $command")
+                    if (command.contains("on")) {
                         Toast.makeText(this@MainActivity, "Received Signal ON!", Toast.LENGTH_SHORT).show()
-                    } else if (command == "off" || command == "of") {
+                        sendDataToESP("on")
+                    } else if (command.contains("of")) {
                         Toast.makeText(this@MainActivity,"Received Signal OFF",Toast.LENGTH_LONG).show()
+                        sendDataToESP("off")
                     }
                 }
                 //restartListening()
@@ -87,11 +99,7 @@ class MainActivity : AppCompatActivity() {
 
         binding.btnOn.setOnClickListener() {
             startListening()
-//            sendDataToESP("on")
-        }
-
-        binding.btnOff.setOnClickListener() {
-            sendDataToESP("off")
+            //sendDataToESP("on")
         }
     }
 
@@ -109,6 +117,47 @@ class MainActivity : AppCompatActivity() {
         speechRecognizer.stopListening() // Stop any ongoing listening
         speechRecognizer.cancel() // Cancel current recognition
         startListening() // Restart listening
+    }
+
+    private fun getLocalIpAddress(): String {
+        val wm = applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+        val ip = wm.connectionInfo.ipAddress
+        return InetAddress.getByAddress(
+            byteArrayOf(
+                (ip and 0xff).toByte(),
+                (ip shr 8 and 0xff).toByte(),
+                (ip shr 16 and 0xff).toByte(),
+                (ip shr 24 and 0xff).toByte()
+            )
+        ).hostAddress ?: "Unavailable"
+    }
+
+    private fun fetchDataFromIP(url: String) {
+        val client = OkHttpClient()
+        val request = Request.Builder().url(url).build()
+
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val response = client.newCall(request).execute()
+                val responseData = response.body?.string()
+                Log.d("DataFrom192.166.4.1", "Response: $responseData")
+
+                if (responseData?.contains("off") == true) {
+                    runOnUiThread {
+                        binding.replayStat.text = "Light Stat: Off"
+                    }
+                }
+
+                if(responseData?.contains("on") == true) {
+                    runOnUiThread {
+                        binding.replayStat.text = "Light Stat: On"
+                    }
+                }
+
+            } catch (e: Exception) {
+                Log.e("ErrorFetchingData", "Failed to fetch data: ${e.message}")
+            }
+        }
     }
 
     private fun sendDataToESP(msg:String) {
@@ -129,7 +178,8 @@ class MainActivity : AppCompatActivity() {
             override fun onResponse(call: okhttp3.Call, response: Response) {
                 if (response.isSuccessful) {
                     val responseData: String = response.body.toString()
-                    runOnUiThread { binding.replayStat.setText("Response Status: ${response.code}") }
+                    runOnUiThread { binding.responseCode.setText("Response Status: ${response.code}") }
+                    fetchDataFromIP("http://192.168.4.1")
                 }
             }
         })

@@ -1,0 +1,32 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="360dp"
+    android:height="640dp"
+    android:viewportWidth="360"
+    android:viewportHeight="640">
+
+    <!-- Circuit-style lines -->
+    <path
+        android:strokeColor="#331B1A1A"
+        android:strokeWidth="1"
+        android:fillColor="@android:color/transparent"
+        android:pathData="M20,50 h30 v30 h30 v30 h30" />
+
+    <path
+        android:strokeColor="#440B0B0B"
+        android:strokeWidth="1"
+        android:fillColor="@android:color/transparent"
+        android:pathData="M60,120 h40 v40 h40 v40 h40" />
+
+    <!-- Simulated circles using paths -->
+    <path
+        android:fillColor="#55090909"
+        android:pathData="M87,90 a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0" />
+
+    <path
+        android:fillColor="#551D1C1C"
+        android:pathData="M147,150 a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0" />
+
+    <path
+        android:fillColor="#550F0E0E"
+        android:pathData="M207,210 a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0" />
+</vector>
