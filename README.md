@@ -1,4 +1,4 @@
-# Voice-Controlled Lighting
+# Voice-Controlled Smart Bulb
 *This Android application enables voice-controlled lighting via integration with an ESP32-based web server.*
 
 ## Key Features
